@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Base64
 import java.util.Properties
 
 plugins {
@@ -13,10 +14,21 @@ val localProperties = Properties().apply {
     }
 }
 
-val releaseStoreFile = file("keystore.jks")
-val releaseStorePassword = localProperties.getProperty("storePassword")
-val releaseKeyAlias = localProperties.getProperty("keyAlias")
-val releaseKeyPassword = localProperties.getProperty("keyPassword")
+val encodedReleaseStore = providers.environmentVariable("APK_KEYSTORE_BASE64").orNull
+val releaseStoreFile = if (encodedReleaseStore != null) {
+    layout.buildDirectory.file("signing/keystore.jks").get().asFile.apply {
+        parentFile.mkdirs()
+        writeBytes(Base64.getDecoder().decode(encodedReleaseStore))
+    }
+} else {
+    file("keystore.jks")
+}
+val releaseStorePassword = providers.environmentVariable("APK_KEYSTORE_PASSWORD").orNull
+    ?: localProperties.getProperty("storePassword")
+val releaseKeyAlias = providers.environmentVariable("APK_KEY_ALIAS").orNull
+    ?: localProperties.getProperty("keyAlias")
+val releaseKeyPassword = providers.environmentVariable("APK_KEY_PASSWORD").orNull
+    ?: localProperties.getProperty("keyPassword")
 val hasReleaseSigning = releaseStoreFile.exists() &&
     releaseStorePassword != null &&
     releaseKeyAlias != null &&
@@ -33,7 +45,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.follow.clash"
+        applicationId = "com.tornets.flclash"
         minSdk = flutter.minSdkVersion
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = flutter.versionCode
