@@ -427,7 +427,7 @@
             'tipIntentTitle',
             'tipIntent',
             commandBlock(
-              ['com.follow.clash.action.START', 'com.follow.clash.action.STOP', 'com.follow.clash.action.TOGGLE'].join(
+              ['com.tornets.flclash.action.START', 'com.tornets.flclash.action.STOP', 'com.tornets.flclash.action.TOGGLE'].join(
                 '\n',
               ),
             ),
