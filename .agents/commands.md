@@ -248,16 +248,16 @@ The changelog is derived from Conventional Commits by `tool/changelog.dart` and 
 that decide the wording.
 
 The app ships no changelog of its own. `render release` appends the released version as JSON inside an HTML comment
-(`<!-- flclash:changelog:json … -->`), so the release body GitHub already returns to `checkForUpdate` carries the
-notes shown in the update dialog. `parseReleaseChangelog` reads that block and falls back to the English
-bullets when a release predates it.
+(`<!-- flclash:changelog:json … -->`), which `parseReleaseChangelog` reads so the update dialog can show notes; it falls
+back to the English bullets when a release predates that block. The release body itself comes from
+`.github/release_template.md`, which carries the download table and no notes, so a published release offers the version
+without a changelog in the update dialog.
 
 ```bash
 dart run tool/changelog.dart verify                  # what CI checks
 dart run tool/changelog.dart release --version 0.8.96
 dart run tool/changelog.dart build --unreleased      # changelog.json only, includes untagged work
 dart run tool/changelog.dart render release --out release.md
-dart run tool/changelog.dart render telegram --out telegram.md
 ```
 
 Releasing a stable version, in order:
@@ -296,10 +296,14 @@ in `CHANGELOG.md`, and are never regenerated.
 skipped and moves on instead of reporting drift that does not exist. Checking mere tag existence is what made every such
 branch fail on an unrelated release.
 
-Prerelease tags (`v0.8.96-pre.N`) skip the release commit, and CI renders their notes with `build --unreleased` for the
-Telegram post. They publish no GitHub release, so the update dialog never sees them. `build --unreleased` reads the
-version from `pubspec.yaml` rather than the tag, so the patch has to be bumped before the first `-pre.N` of a cycle:
-while `v<pubspec version>` is still tagged it refuses to collect anything and the release job fails.
+Prerelease tags (`v0.8.96-pre.N`) skip the release commit. They do publish a GitHub release, marked as a prerelease,
+so `/releases/latest` still skips them and the update dialog never offers one. The release body is filled from
+`.github/release_template.md` by `sed`, so publishing a tag needs no matching `changelog.json` entry; `verify` runs on
+`main` only for that reason.
+
+The Android artifact is signed from four repository secrets — `APK_KEYSTORE_BASE64`, `APK_KEYSTORE_PASSWORD`,
+`APK_KEY_ALIAS`, `APK_KEY_PASSWORD` — which `android/app/build.gradle.kts` reads as environment variables too. Without
+all four, the release build falls back to the debug key and carries the `.dev` app id suffix.
 
 ### Website
 
@@ -327,13 +331,13 @@ proportions, and the slanted wipes, the dot-to-bar marks and the theme transitio
 inside the hero has to be listed in `wireField` in `app.js`, or the capsules run behind it.
 
 `.github/workflows/pages.yaml` deploys it after every successful stable tag build and on pushes to `main` that touch the
-site, in the public repository only; its Pages source has to be set to GitHub Actions once. The file names come from the
-release matrix in `build.yaml`, so a renamed artifact needs the same change in `buildsFor` in `site/assets/app.js`.
+site, in upstream only; its Pages source has to be set to GitHub Actions once. The file names come from the release
+matrix in `build.yaml`, so a renamed artifact needs the same change in `buildsFor` in `site/assets/app.js`.
 
 ## Verify
 
-In the public repository every branch push runs the `dart` job; in the private
-`origin` every check job runs only when started by hand (`workflow_dispatch`).
+Every branch push and tag push runs the check jobs, except on a private
+repository, where they run only when started by hand (`workflow_dispatch`).
 The `dart` job performs these root-package checks in order:
 
 ```bash
@@ -341,7 +345,7 @@ bash tool/hooks/test.sh
 flutter pub get
 dart format --output=none --set-exit-if-changed lib test tool plugins setup.dart
 flutter analyze --no-fatal-infos
-dart run tool/changelog.dart verify   # main and tags only
+dart run tool/changelog.dart verify   # main only
 dart run tool/test.dart -- --reporter expanded --coverage
 dart run tool/check_coverage.dart coverage/lcov.info 75
 ```
@@ -360,9 +364,9 @@ for `:common`, `:service` and `:app`, with the Flutter compile tasks excluded
 and the gomobile AAR built for one ABI), `rust` (both crates), and a
 Windows runner for the helper's `windows-service` feature. On branch pushes a
 `desktop` job also compiles a debug build per desktop platform; a tag skips it,
-since its release matrix compiles the same native code. Release builds run only
-in the public repository and start alongside the checks; `upload` publishes
-only once every build and every check job passes.
+since its release matrix compiles the same native code. A `v*` tag also starts
+the release `build` alongside the checks; `upload` publishes only once every
+build and every check job passes.
 
 `bash tool/check_plugins.sh` is that plugin gate, and CI runs the same script.
 It discovers every `plugins/*/pubspec.yaml`, analyzes each package, and runs

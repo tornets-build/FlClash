@@ -27,7 +27,7 @@ Options:
   -h, --help         Show this help.
 
 Examples:
-  tool/release.sh pre --push          # v0.8.97-pre.1, notes rendered by CI
+  tool/release.sh pre --push          # v0.8.97-pre.1, published as a prerelease
   tool/release.sh stable --push       # v0.8.97 with a chore(release) commit
 EOF
 }
@@ -122,11 +122,11 @@ echo "branch    : $branch"
 echo "version   : $current -> $version$([[ $bumped == 1 ]] && echo ' (pubspec will be rewritten)')"
 echo "tag       : $tag"
 if [[ "$mode" == "pre" ]]; then
-  echo "changelog : rendered by CI from build --unreleased; nothing committed"
-  echo "publishes : build artifacts + Telegram only, no GitHub release"
+  echo "changelog : nothing committed; previewed from unreleased commits below"
+  echo "publishes : GitHub release marked prerelease, artifacts only"
 else
   echo "changelog : CHANGELOG.md + changelog.json regenerated and committed"
-  echo "publishes : GitHub release with artifacts, SHA256SUMS, Homebrew cask"
+  echo "publishes : GitHub release with artifacts and SHA256SUMS"
 fi
 echo "push      : $([[ $do_push == 1 ]] && echo yes || echo 'no (printed at the end)')"
 echo
